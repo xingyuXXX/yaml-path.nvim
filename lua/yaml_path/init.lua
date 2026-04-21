@@ -524,6 +524,32 @@ function M.current_path(bufnr, cursor_line)
   return table.concat(parts, ".")
 end
 
+function M.copy_current_path(opts)
+  opts = opts or {}
+
+  local value = M.current_path(opts.bufnr, opts.cursor_line)
+  if value == "" then
+    if opts.notify ~= false and vim.notify then
+      vim.notify("No YAML path available", vim.log and vim.log.levels and vim.log.levels.WARN or nil)
+    end
+    return ""
+  end
+
+  local register = opts.register or "+"
+  if vim.fn and vim.fn.setreg then
+    vim.fn.setreg(register, value)
+    if register ~= '"' then
+      vim.fn.setreg('"', value)
+    end
+  end
+
+  if opts.notify ~= false and vim.notify then
+    vim.notify(string.format("Copied YAML path to %s", register))
+  end
+
+  return value
+end
+
 function M.clear_cache(bufnr)
   if bufnr == nil then
     cache_by_buf = {}

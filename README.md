@@ -67,10 +67,34 @@ The function returns `""` for non-YAML buffers.
 - `bufnr`: optional buffer number, defaults to current buffer
 - `cursor_line`: optional 1-based cursor line, defaults to current cursor line
 
+`require("yaml_path").copy_current_path(opts?)`
+
+- copies the current YAML path into the clipboard register by default
+- returns the copied string, or `""` when no YAML path is available
+- `opts.register`: optional register name, defaults to `"+"`
+- `opts.notify`: set to `false` to skip `vim.notify`
+
 `require("yaml_path").clear_cache(bufnr?)`
 
 - clears cached parse state for one buffer
 - clears all cached buffers when called without arguments
+
+With LazyVim, the native place for the hotkey is the plugin spec `keys` table. `<leader>yp` is a good default: it follows the mnemonic "yank path" and does not fight LazyVim's built-in groups.
+
+```lua
+{
+  "xingyuXXX/yaml-path.nvim",
+  keys = {
+    {
+      "<leader>yp",
+      function()
+        require("yaml_path").copy_current_path()
+      end,
+      desc = "Yank YAML Path",
+    },
+  },
+}
+```
 
 ## Testing
 
