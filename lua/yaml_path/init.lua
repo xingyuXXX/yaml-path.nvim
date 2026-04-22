@@ -259,7 +259,6 @@ local function buffer_cache(bufnr)
 
   local fresh = {
     changedtick = changedtick,
-    lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false),
     root = tree:root(),
     label_cache = {},
     kind_cache = {},
@@ -381,7 +380,7 @@ function M.current_path(bufnr, cursor_line)
   end
 
   local row = math.max(cursor_line - 1, 0)
-  local line_text = cache.lines[cursor_line] or ""
+  local line_text = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1] or ""
   local target = node_for_cursor(cache.root, row, line_text)
   if not target then
     return ""
