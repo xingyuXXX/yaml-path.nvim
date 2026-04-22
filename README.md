@@ -6,23 +6,37 @@ Fast YAML path resolution for Neovim statuslines, optimized for formatter-normal
 
 `yaml-path.nvim` returns a dotted path for the current cursor position in a YAML buffer, with readable labels for common Kubernetes list items:
 
-- `pod.spec.containers[app].image`
-- `pod.spec.containers[app].ports[http].containerPort`
-- `pod.spec.containers[app].envFrom[configMapRef:app-config].configMapRef`
+```sh
+pod.spec.containers[app].image
+pod.spec.containers[app].ports[http].containerPort
+pod.spec.containers[app].envFrom[configMapRef:app-config].configMapRef
+```
 
 It is designed for statusline components such as `lualine`.
 
 ## Scope
 
-This is not a full YAML parser.
+This is not a full YAML parser. It uses Tree-sitter's YAML parser to resolve the current position into a dotted path.
 
 The resolver is intentionally tuned for:
 
 - formatter-normalized, block-style YAML
-- stable indentation
 - Kubernetes-style manifests
+- readable labels for common list items such as containers, ports, and envFrom
 
-It intentionally does not try to support every YAML feature or ambiguous formatting style.
+It intentionally does not try to support every YAML feature or invent labels for every possible sequence shape.
+
+Recommended `yamlfmt` config:
+
+```yaml
+formatter:
+  indent: 2
+  indentless_arrays: true
+  include_document_start: false
+  eof_newline: true
+  retain_line_breaks: true
+  pad_line_comments: 1
+```
 
 ## Installation
 
@@ -31,8 +45,11 @@ With `lazy.nvim`:
 ```lua
 {
   "xingyuXXX/yaml-path.nvim",
+  dependencies = { "nvim-treesitter/nvim-treesitter" },
 }
 ```
+
+Make sure the `yaml` Tree-sitter parser is installed.
 
 ## Usage
 
@@ -98,10 +115,10 @@ With LazyVim, the native place for the hotkey is the plugin spec `keys` table. `
 
 ## Testing
 
-Run the standalone Lua test harness from the repo root:
+Run the headless Neovim test harness from the repo root:
 
 ```bash
-lua tests/check.lua
+nvim --headless -u NONE -i NONE -l tests/check.lua
 ```
 
 ## License

@@ -6,57 +6,33 @@ package.path = table.concat({
 
 local yaml_path = require("yaml_path")
 
-vim = vim or {}
-vim.bo = setmetatable({}, {
-  __index = function()
-    return { filetype = "yaml" }
-  end,
-})
-vim.b = vim.b
-  or setmetatable({}, {
-    __index = function(t, k)
-      local v = { changedtick = 0 }
-      rawset(t, k, v)
-      return v
-    end,
-  })
-vim.api = vim.api or {}
-vim.fn = vim.fn or {}
-local changedtick = 0
-local registers = {}
+local buf = vim.api.nvim_create_buf(false, true)
+vim.bo[buf].filetype = "yaml"
+vim.notify = function() end
 
+local registers = {}
 vim.fn.setreg = function(name, value)
   registers[name] = value
 end
 
-local function set_lines(lines)
-  changedtick = changedtick + 1
-  yaml_path.clear_cache(0)
-  vim.b[0].changedtick = changedtick
+local function set_lines(lines, filetype)
+  yaml_path.clear_cache(buf)
+  vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
+  vim.bo[buf].filetype = filetype or "yaml"
   registers = {}
-  vim.api.nvim_buf_get_lines = function(_, start_, end_, _)
-    local last = end_ == -1 and #lines or end_
-    local out = {}
-    for i = start_ + 1, last do
-      out[#out + 1] = lines[i]
-    end
-    return out
-  end
 end
 
-local function current_path(lines, line)
-  set_lines(lines)
-  vim.api.nvim_win_get_cursor = function()
-    return { line, 1 }
-  end
-  return yaml_path.current_path(0, line)
+local function current_path(lines, line, filetype)
+  set_lines(lines, filetype)
+  return yaml_path.current_path(buf, line)
 end
 
-local function copy_current_path(lines, line, opts)
-  set_lines(lines)
-  vim.api.nvim_win_get_cursor = function()
-    return { line, 1 }
-  end
+local function copy_current_path(lines, line, opts, filetype)
+  set_lines(lines, filetype)
+  opts = vim.tbl_extend("force", opts or {}, {
+    bufnr = buf,
+    cursor_line = line,
+  })
   return yaml_path.copy_current_path(opts)
 end
 
@@ -128,6 +104,36 @@ local cases = {
       "      ports:",
       "        - containerPort: 8080",
       "          name: http",
+    },
+  },
+  {
+    name = "indentless containers keep item path",
+    line = 7,
+    expected = "pod.spec.containers[app].image",
+    lines = {
+      "kind: Pod",
+      "spec:",
+      "  containers:",
+      "  - name: app",
+      "    ports:",
+      "    - containerPort: 8080",
+      "    image: nginx",
+    },
+  },
+  {
+    name = "indentless envFrom entries use referenced names",
+    line = 6,
+    expected = "pod.spec.containers[app].envFrom[configMapRef:app-config].configMapRef",
+    lines = {
+      "kind: Pod",
+      "spec:",
+      "  containers:",
+      "  - name: app",
+      "    envFrom:",
+      "    - configMapRef:",
+      "        name: app-config",
+      "    - secretRef:",
+      "        name: app-secret",
     },
   },
   {
@@ -333,22 +339,13 @@ local copy_cases = {
     expected = "",
     opts = { notify = false },
     expected_registers = {},
-    before = function()
-      vim.bo[0] = { filetype = "lua" }
-    end,
-    after = function()
-      vim.bo[0] = { filetype = "yaml" }
-    end,
     lines = { 'print("hi")' },
+    filetype = "lua",
   },
 }
 
 for _, case in ipairs(copy_cases) do
-  if case.before then
-    case.before()
-  end
-
-  local got = copy_current_path(case.lines, case.line, case.opts)
+  local got = copy_current_path(case.lines, case.line, case.opts, case.filetype)
   if got ~= case.expected then
     failed = true
     io.stderr:write(
@@ -376,18 +373,20 @@ for _, case in ipairs(copy_cases) do
     if case.expected_registers[register] == nil then
       failed = true
       io.stderr:write(
-        string.format("%s unexpected register %s\n  got:      %s\n", case.name, register, tostring(actual))
+        string.format(
+          "%s unexpected register %s\n  got:      %s\n",
+          case.name,
+          register,
+          tostring(actual)
+        )
       )
     end
-  end
-
-  if case.after then
-    case.after()
   end
 end
 
 if failed then
-  os.exit(1)
+  vim.cmd("cquit 1")
 end
 
 print(string.format("yaml_path: %d cases passed", #cases + #copy_cases))
+vim.cmd("quit")
