@@ -82,7 +82,7 @@ The function returns `""` for non-YAML buffers.
 `require("yaml_path").current_path(bufnr?, cursor_line?)`
 
 - `bufnr`: optional buffer number, defaults to current buffer
-- `cursor_line`: optional 1-based cursor line, defaults to current cursor line
+- `cursor_line`: optional 0-based cursor line, defaults to current cursor line
 
 `require("yaml_path").copy_current_path(opts?)`
 

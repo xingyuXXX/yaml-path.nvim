@@ -174,18 +174,18 @@ end
 local function item_index(item_node)
   local parent = item_node and item_node:parent() or nil
   if not parent then
-    return 1
+    return 0
   end
 
   local index = 0
   for _, child in ipairs(sequence_items(parent)) do
-    index = index + 1
     if child:id() == item_node:id() then
       return index
     end
+    index = index + 1
   end
 
-  return 1
+  return 0
 end
 
 local function find_envfrom_label(bufnr, item_node)
@@ -395,7 +395,10 @@ function M.copy_current_path(opts)
   local value = M.current_path(opts.bufnr, opts.cursor_line)
   if value == "" then
     if opts.notify ~= false and vim.notify then
-      vim.notify("No YAML path available", vim.log and vim.log.levels and vim.log.levels.WARN or nil)
+      vim.notify(
+        "No YAML path available",
+        vim.log and vim.log.levels and vim.log.levels.WARN or nil
+      )
     end
     return ""
   end
